@@ -373,7 +373,7 @@ To configure the deployment manually in the Render dashboard:
    - **Build Command:** `pip install -r requirements.txt`
    - **Start Command:** `gunicorn server:app`
 4. Add the following **Environment Variable**:
-   - `PYTHON_VERSION`: `3.11.2`
+   - `PYTHON_VERSION`: `3.11`
 
 ## Troubleshooting
 
