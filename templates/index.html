@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ShopTiles – Premium Choropleth Density Maps</title>
+    <!-- Google Fonts for premium typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #0a0a0c;
+            --bg-surface: rgba(22, 22, 26, 0.75);
+            --bg-input: rgba(30, 30, 36, 0.6);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(255, 255, 255, 0.18);
+            --text-main: #f4f4f6;
+            --text-muted: #9fa0a6;
+            --primary: #e8b35c;
+            --primary-hover: #f1c277;
+            --secondary: #5b8fd4;
+            --secondary-hover: #7ba6e2;
+            --accent-success: #50bfa5;
+            --font-display: 'Playfair Display', Georgia, serif;
+            --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--bg-base);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(232, 179, 92, 0.05) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(91, 127, 212, 0.05) 0px, transparent 50%);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Glassmorphism styling helper */
+        .glass-panel {
+            background: var(--bg-surface);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+            transition: var(--transition-smooth);
+        }
+
+        .container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            padding: 16px;
+            gap: 16px;
+        }
+
+        /* Sidebar Control Center */
+        .sidebar {
+            width: 360px;
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .sidebar h1 {
+            font-family: var(--font-display);
+            font-size: 26px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #f4f4f6 30%, #e8b35c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .sidebar p.subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .control-group label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .control-group input[type="text"],
+        .control-group select {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-family: var(--font-sans);
+            font-size: 14px;
+            background: var(--bg-input);
+            color: var(--text-main);
+            outline: none;
+            transition: var(--transition-smooth);
+        }
+
+        .control-group input[type="text"]:focus,
+        .control-group select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 10px rgba(232, 179, 92, 0.2);
+            background: rgba(30, 30, 36, 0.9);
+        }
+
+        /* Styled Color Picker */
+        .color-picker-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .control-group input[type="color"] {
+            -webkit-appearance: none;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            background: none;
+            outline: none;
+        }
+
+        .control-group input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+
+        .control-group input[type="color"]::-webkit-color-swatch {
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+        }
+
+        /* Range Slider */
+        .slider-container {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .slider-value {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2px 8px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .control-group input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--border-color);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .control-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            transition: transform 0.15s ease;
+        }
+
+        .control-group input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+
+        /* Checkbox Switch */
+        .switch-label {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text-main);
+        }
+
+        .switch-control {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+
+        .switch-control input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider-switch {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--border-color);
+            transition: .3s;
+            border-radius: 24px;
+            border: 1px solid var(--border-color);
+        }
+
+        .slider-switch:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider-switch {
+            background-color: var(--secondary);
+        }
+
+        input:checked + .slider-switch:before {
+            transform: translateX(20px);
+        }
+
+        /* Buttons and Animations */
+        button {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            font-family: var(--font-sans);
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #0c0c0f;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(232, 179, 92, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            margin-top: 10px;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--border-hover);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        /* Status Toast Alert */
+        .toast {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            padding: 16px 20px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 1000;
+            transform: translateY(-50px);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast.success {
+            background: #142a22;
+            color: #50bfa5;
+            border: 1px solid rgba(80, 191, 165, 0.25);
+        }
+
+        .toast.error {
+            background: #2a1418;
+            color: #ff6b8b;
+            border: 1px solid rgba(255, 107, 139, 0.25);
+        }
+
+        .toast.info {
+            background: #14213d;
+            color: #7ba6e2;
+            border: 1px solid rgba(123, 166, 226, 0.25);
+        }
+
+        /* Main Workspace Content Area */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            height: 100%;
+        }
+
+        /* Stats Dashboard Panel */
+        .stats-dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            width: 100%;
+        }
+
+        .stat-card {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .stat-card .label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+        }
+
+        .stat-card .value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        /* Map Canvas */
+        .map-view {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .map-wrapper {
+            position: relative;
+            max-width: 100%;
+            max-height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .map-placeholder {
+            font-family: var(--font-display);
+            font-style: italic;
+            font-size: 18px;
+            color: var(--text-muted);
+            text-align: center;
+            max-width: 320px;
+            line-height: 1.5;
+        }
+
+        .map-view svg {
+            width: auto;
+            height: auto;
+            max-width: 100%;
+            max-height: calc(100vh - 180px);
+            border-radius: 8px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Loading Screen overlay */
+        .loader-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(10, 10, 12, 0.85);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 16px;
+            border-radius: 16px;
+            opacity: 0;
+            pointer-events: none;
+            transition: var(--transition-smooth);
+            z-index: 100;
+        }
+
+        .loader-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .spinner-outer {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(232, 179, 92, 0.08);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s infinite cubic-bezier(0.5, 0, 0.5, 1);
+        }
+
+        .loader-text {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-main);
+            letter-spacing: 0.5px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Sidebar Divider */
+        .divider {
+            height: 1px;
+            background: var(--border-color);
+            margin: 20px 0;
+        }
+
+        /* Quick Cache Selector */
+        .cache-selector-group {
+            margin-bottom: 20px;
+            background: rgba(232, 179, 92, 0.05);
+            border: 1px dashed rgba(232, 179, 92, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .cache-selector-group label {
+            color: var(--primary);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .cache-selector-group select {
+            background: var(--bg-base);
+            border: 1px solid rgba(232, 179, 92, 0.2);
+            color: var(--primary);
+            padding: 8px 10px;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast">
+        <span id="toastIcon"></span>
+        <span id="toastText"></span>
+    </div>
+
+    <div class="container">
+        <!-- Sidebar Control Panel -->
+        <div class="sidebar glass-panel">
+            <h1>ShopTiles</h1>
+            <p class="subtitle">Editorial-style density choropleths</p>
+
+            <!-- Quick Cached Selection Dropdown -->
+            <div class="cache-selector-group" id="cacheGroup" style="display: none;">
+                <label for="cacheSelect">✨ Load Cached Dataset</label>
+                <select id="cacheSelect">
+                    <option value="">-- Select Cached Query --</option>
+                </select>
+            </div>
+
+            <!-- Parameters Card -->
+            <div class="control-group">
+                <label for="city">Target City</label>
+                <input type="text" id="city" value="Berlin" placeholder="e.g. Berlin, Paris">
+            </div>
+
+            <div class="control-group">
+                <label for="shopType">Shop Type tag</label>
+                <input type="text" id="shopType" value="cafe" placeholder="e.g. cafe, boulangerie">
+            </div>
+
+            <div class="control-group">
+                <label for="tagType">OSM Tag Key</label>
+                <select id="tagType">
+                    <option value="amenity">amenity</option>
+                    <option value="shop">shop</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="chain">Chain / Overlay Brand (optional)</label>
+                <input type="text" id="chain" value="LAP Coffee" placeholder="e.g. LAP Coffee, Starbucks">
+            </div>
+
+            <button class="btn-primary" id="fetchBtn">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                    <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                </svg>
+                Fetch OSM Data
+            </button>
+
+            <div class="divider"></div>
+
+            <!-- Visual Styling Settings -->
+            <div class="control-group">
+                <div class="slider-container">
+                    <div class="slider-header">
+                        <label for="tileSize">Tile Size Grid</label>
+                        <span class="slider-value" id="tileSizeVal">1.0 km</span>
+                    </div>
+                    <input type="range" id="tileSize" min="0.25" max="3.0" step="0.25" value="1.0">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label for="palette">Map Color Palette</label>
+                <select id="palette">
+                    <option value="original">Original (Tan → Burgundy)</option>
+                    <option value="hot">Hot (Yellow → Orange → Red)</option>
+                    <option value="cool">Cool (Yellow → Teal → Blue)</option>
+                    <option value="viridis">Viridis (Purple → Green → Yellow)</option>
+                    <option value="grayscale">Grayscale (White → Charcoal)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>Overlay Marker Color</label>
+                <div class="color-picker-wrapper">
+                    <input type="color" id="markerColor" value="#5b8fd4">
+                    <span style="font-size: 13px; color: var(--text-muted);">Choose color for brand markers</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label for="mapTitle">Custom Title (optional)</label>
+                <input type="text" id="mapTitle" placeholder="Defaults to: ShopType in City">
+            </div>
+
+            <div class="control-group">
+                <label class="switch-label" for="showRoads">
+                    <span>Render Major Roads</span>
+                    <span class="switch-control">
+                        <input type="checkbox" id="showRoads">
+                        <span class="slider-switch"></span>
+                    </span>
+                </label>
+            </div>
+
+            <button class="btn-primary" id="renderBtn" style="background-color: var(--secondary); color: #fff;">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                    <path d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8z"/>
+                </svg>
+                Generate SVG Map
+            </button>
+
+            <button class="btn-secondary" id="downloadSvgBtn" style="display: none;">
+                Download SVG
+            </button>
+            <button class="btn-secondary" id="downloadPngBtn" style="display: none;">
+                Download PNG
+            </button>
+        </div>
+
+        <!-- Main Dashboard and Map Panel -->
+        <div class="content">
+            <!-- Stats Dashboard Cards -->
+            <div class="stats-dashboard">
+                <div class="stat-card glass-panel">
+                    <span class="label">Total Cached Shops</span>
+                    <span class="value" id="statShops">--</span>
+                </div>
+                <div class="stat-card glass-panel">
+                    <span class="label">Chain Locations</span>
+                    <span class="value" id="statChain">--</span>
+                </div>
+                <div class="stat-card glass-panel">
+                    <span class="label">Geographic Context</span>
+                    <span class="value" id="statGeo">--</span>
+                </div>
+            </div>
+
+            <!-- Map Area -->
+            <div class="map-view glass-panel">
+                <!-- Loader Overlay -->
+                <div class="loader-overlay" id="loader">
+                    <div class="spinner-outer"></div>
+                    <div class="loader-text" id="loaderText">Processing...</div>
+                </div>
+
+                <div class="map-wrapper" id="mapWrapper">
+                    <div class="map-placeholder" id="placeholderText">
+                        Enter city and tags to query, fetch OSM data, then generate your custom density map.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const cityInput = document.getElementById("city");
+        const shopTypeInput = document.getElementById("shopType");
+        const tagTypeSelect = document.getElementById("tagType");
+        const chainInput = document.getElementById("chain");
+        const tileSizeSlider = document.getElementById("tileSize");
+        const tileSizeVal = document.getElementById("tileSizeVal");
+        const paletteSelect = document.getElementById("palette");
+        const markerColorInput = document.getElementById("markerColor");
+        const mapTitleInput = document.getElementById("mapTitle");
+        const showRoadsCheckbox = document.getElementById("showRoads");
+
+        const fetchBtn = document.getElementById("fetchBtn");
+        const renderBtn = document.getElementById("renderBtn");
+        const downloadSvgBtn = document.getElementById("downloadSvgBtn");
+        const downloadPngBtn = document.getElementById("downloadPngBtn");
+        const mapWrapper = document.getElementById("mapWrapper");
+        const placeholderText = document.getElementById("placeholderText");
+        const loader = document.getElementById("loader");
+        const loaderText = document.getElementById("loaderText");
+
+        const cacheGroup = document.getElementById("cacheGroup");
+        const cacheSelect = document.getElementById("cacheSelect");
+
+        const statShops = document.getElementById("statShops");
+        const statChain = document.getElementById("statChain");
+        const statGeo = document.getElementById("statGeo");
+
+        let currentSvg = null;
+        let dbStats = {};
+
+        // Toast utility
+        function showToast(message, type = "info") {
+            const toast = document.getElementById("toast");
+            const toastText = document.getElementById("toastText");
+            const toastIcon = document.getElementById("toastIcon");
+
+            toastText.textContent = message;
+            toast.className = `toast show ${type}`;
+
+            if (type === "success") toastIcon.textContent = "✓";
+            else if (type === "error") toastIcon.textContent = "✗";
+            else toastIcon.textContent = "ℹ";
+
+            setTimeout(() => {
+                toast.classList.remove("show");
+            }, 6000);
+        }
+
+        // Loader helper
+        function setLoader(active, text = "Loading...") {
+            loaderText.textContent = text;
+            if (active) {
+                loader.classList.add("active");
+            } else {
+                loader.classList.remove("active");
+            }
+        }
+
+        // Update slider value text
+        tileSizeSlider.addEventListener("input", (e) => {
+            tileSizeVal.textContent = `${e.target.value} km`;
+        });
+
+        // Load DB cache stats & Populate dropdown
+        async function loadCacheStats() {
+            try {
+                const res = await fetch("/api/stats");
+                if (!res.ok) return;
+
+                dbStats = await res.json();
+                
+                // Clear existing dropdown choices (except default)
+                cacheSelect.innerHTML = '<option value="">-- Select Cached Query --</option>';
+                
+                let hasData = false;
+                
+                // Build cached configurations
+                for (const [cityName, cityData] of Object.entries(dbStats)) {
+                    for (const [queryTag, count] of Object.entries(cityData.shops)) {
+                        hasData = true;
+                        
+                        // Parse tag type and tag value (e.g. amenity:cafe)
+                        const parts = queryTag.split(":");
+                        const tagType = parts[0];
+                        const shopType = parts.slice(1).join(":");
+                        
+                        // Skip if it's name:* which represents cached chains
+                        if (tagType === "name") continue;
+                        
+                        // Find matching chains for this city to display in label or reference
+                        const chains = Object.keys(cityData.shops)
+                            .filter(t => t.startsWith("name:"))
+                            .map(t => t.substring(5));
+                        
+                        const optionText = `${cityName} — ${shopType} (${count} cached)` + (chains.length ? ` + ${chains.join(", ")}` : '');
+                        const optionVal = JSON.stringify({
+                            city: cityName,
+                            shopType: shopType,
+                            tagType: tagType,
+                            chain: chains[0] || ""
+                        });
+                        
+                        const option = document.createElement("option");
+                        option.value = optionVal;
+                        option.textContent = optionText;
+                        cacheSelect.appendChild(option);
+                    }
+                }
+                
+                if (hasData) {
+                    cacheGroup.style.display = "block";
+                } else {
+                    cacheGroup.style.display = "none";
+                }
+            } catch (e) {
+                console.error("Failed to load database cache statistics:", e);
+            }
+        }
+
+        // Handle Quick Cached selection
+        cacheSelect.addEventListener("change", (e) => {
+            if (!e.target.value) return;
+            
+            const data = JSON.parse(e.target.value);
+            cityInput.value = data.city;
+            shopTypeInput.value = data.shopType;
+            tagTypeSelect.value = data.tagType;
+            chainInput.value = data.chain;
+            
+            updateStatsDashboard(data.city, `${data.tagType}:${data.shopType}`, data.chain);
+            showToast(`Loaded inputs for ${data.city} from cache!`, "success");
+        });
+
+        // Update dashboard widgets
+        function updateStatsDashboard(city, queryTag, chain) {
+            const cityData = dbStats[city];
+            if (!cityData) {
+                statShops.textContent = "--";
+                statChain.textContent = "--";
+                statGeo.textContent = "None";
+                return;
+            }
+
+            const shopCount = cityData.shops[queryTag] || 0;
+            statShops.textContent = `${shopCount.toLocaleString()} shops`;
+
+            if (chain) {
+                const chainCount = cityData.shops[`name:${chain}`] || 0;
+                statChain.textContent = `${chainCount} locations`;
+            } else {
+                statChain.textContent = "None";
+            }
+
+            const waterCount = cityData.geo_features["water"] || 0;
+            const roadCount = cityData.geo_features["road"] || 0;
+            
+            let geoStr = "";
+            if (waterCount > 0) geoStr += "Water 💧";
+            if (roadCount > 0) geoStr += (geoStr ? " + " : "") + "Roads 🛣️";
+            statGeo.textContent = geoStr || "Not fetched";
+        }
+
+        // Fetch data event
+        fetchBtn.addEventListener("click", async () => {
+            const city = cityInput.value.trim();
+            const shopType = shopTypeInput.value.trim();
+            const tag = tagTypeSelect.value;
+            const chain = chainInput.value.trim();
+
+            if (!city || !shopType) {
+                showToast("Please enter city and shop type tags.", "error");
+                return;
+            }
+
+            fetchBtn.disabled = true;
+            setLoader(true, `Downloading OpenStreetMap data for ${city}... (may take a moment)`);
+
+            try {
+                const res = await fetch("/api/fetch", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ city, shop_type: shopType, tag, chain: chain || undefined })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    showToast(data.message, "success");
+                    await loadCacheStats();
+                    updateStatsDashboard(city, `${tag}:${shopType}`, chain);
+                } else {
+                    showToast(`Error: ${data.error}`, "error");
+                }
+            } catch (e) {
+                showToast(`Network Error: ${e.message}`, "error");
+            } finally {
+                setLoader(false);
+                fetchBtn.disabled = false;
+            }
+        });
+
+        // Render map event
+        renderBtn.addEventListener("click", async () => {
+            const city = cityInput.value.trim();
+            const shopType = shopTypeInput.value.trim();
+            const tag = tagTypeSelect.value;
+            const chain = chainInput.value.trim();
+            const tileSize = parseFloat(tileSizeSlider.value);
+            const palette = paletteSelect.value;
+            const markerColor = markerColorInput.value;
+            const title = mapTitleInput.value.trim();
+
+            if (!city || !shopType) {
+                showToast("Please enter city and shop type.", "error");
+                return;
+            }
+
+            renderBtn.disabled = true;
+            setLoader(true, "Generating choropleth map layout...");
+
+            try {
+                const res = await fetch("/api/render", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        city, shop_type: shopType, tag, chain: chain || undefined,
+                        tile_size: tileSize, palette, marker_color: markerColor, title,
+                        show_roads: showRoadsCheckbox.checked
+                    })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    currentSvg = data.svg;
+                    mapWrapper.innerHTML = currentSvg;
+                    downloadSvgBtn.style.display = "flex";
+                    downloadPngBtn.style.display = "flex";
+                    showToast("Map rendered with correct aspect ratios!", "success");
+                    await loadCacheStats();
+                    updateStatsDashboard(city, `${tag}:${shopType}`, chain);
+                } else {
+                    showToast(`Error: ${data.error}`, "error");
+                }
+            } catch (e) {
+                showToast(`Network Error: ${e.message}`, "error");
+            } finally {
+                setLoader(false);
+                renderBtn.disabled = false;
+            }
+        });
+
+        // Download SVG handler
+        downloadSvgBtn.addEventListener("click", () => {
+            if (!currentSvg) return;
+            const blob = new Blob([currentSvg], { type: "image/svg+xml" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `shoptiles-${cityInput.value.trim().toLowerCase()}-${shopTypeInput.value.trim().toLowerCase()}.svg`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        // Download PNG handler
+        downloadPngBtn.addEventListener("click", () => {
+            if (!currentSvg) return;
+
+            setLoader(true, "Converting SVG to raster image...");
+
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+
+            const svgBlob = new Blob([currentSvg], { type: "image/svg+xml" });
+            const url = URL.createObjectURL(svgBlob);
+
+            const img = new Image();
+            img.onload = () => {
+                // Ensure high resolution drawing
+                canvas.width = img.width * 2;
+                canvas.height = img.height * 2;
+                ctx.scale(2, 2);
+                
+                ctx.drawImage(img, 0, 0);
+                URL.revokeObjectURL(url);
+
+                canvas.toBlob((blob) => {
+                    const a = document.createElement("a");
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `shoptiles-${cityInput.value.trim().toLowerCase()}-${shopTypeInput.value.trim().toLowerCase()}.png`;
+                    a.click();
+                    setLoader(false);
+                }, "image/png");
+            };
+            img.onerror = (err) => {
+                showToast("Could not rasterize SVG to PNG.", "error");
+                setLoader(false);
+            };
+            img.src = url;
+        });
+
+        // Initialize UI stats
+        window.addEventListener("load", loadCacheStats);
+    </script>
+</body>
+</html>
